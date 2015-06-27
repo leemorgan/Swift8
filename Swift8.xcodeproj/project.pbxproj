@@ -11,6 +11,8 @@
 		9BC048EC1A9CBD98004E1328 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9BC048EB1A9CBD98004E1328 /* Images.xcassets */; };
 		9BC048EF1A9CBD98004E1328 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9BC048ED1A9CBD98004E1328 /* MainMenu.xib */; };
 		9BC048FB1A9CBD99004E1328 /* Swift8Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC048FA1A9CBD99004E1328 /* Swift8Tests.swift */; };
+		9BC049051A9CBDC3004E1328 /* Swift8.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC049041A9CBDC3004E1328 /* Swift8.swift */; };
+		9BEF3A651B14DAAE0057619E /* Swift8View.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEF3A641B14DAAE0057619E /* Swift8View.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +34,8 @@
 		9BC048F41A9CBD99004E1328 /* Swift8Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Swift8Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BC048F91A9CBD99004E1328 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9BC048FA1A9CBD99004E1328 /* Swift8Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swift8Tests.swift; sourceTree = "<group>"; };
+		9BC049041A9CBDC3004E1328 /* Swift8.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift8.swift; sourceTree = "<group>"; };
+		9BEF3A641B14DAAE0057619E /* Swift8View.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift8View.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,7 +77,9 @@
 		9BC048E61A9CBD98004E1328 /* Swift8 */ = {
 			isa = PBXGroup;
 			children = (
+				9BC049041A9CBDC3004E1328 /* Swift8.swift */,
 				9BC048E91A9CBD98004E1328 /* AppDelegate.swift */,
+				9BEF3A641B14DAAE0057619E /* Swift8View.swift */,
 				9BC048EB1A9CBD98004E1328 /* Images.xcassets */,
 				9BC048ED1A9CBD98004E1328 /* MainMenu.xib */,
 				9BC048E71A9CBD98004E1328 /* Supporting Files */,
@@ -205,6 +211,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BEF3A651B14DAAE0057619E /* Swift8View.swift in Sources */,
+				9BC049051A9CBDC3004E1328 /* Swift8.swift in Sources */,
 				9BC048EA1A9CBD98004E1328 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -393,6 +401,7 @@
 				9BC049001A9CBD99004E1328 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		9BC049011A9CBD99004E1328 /* Build configuration list for PBXNativeTarget "Swift8Tests" */ = {
 			isa = XCConfigurationList;
@@ -401,6 +410,7 @@
 				9BC049031A9CBD99004E1328 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
