@@ -4,20 +4,21 @@ import AppKit
 
 class Swift8 {
 	
-	// Program Counter (PC)
-	var pc : UInt16 = 0x200 // Programs are loaded in starting at the 512th byte (0x200 in Hex).
+	/// Program Counter (PC)
+	/// Programs are loaded in starting at the 512th byte (0x200 in Hex).
+	private var pc : UInt16 = 0x200
 	
-	// VRAM. 64x32 beautiful pixels.
-	var gfx = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+	/// The Stack
+	private var stack = [UInt16](count: 16, repeatedValue: 0)
 	
-	// The Stack and Stack Pointer
-	var stack = [UInt16](count: 16, repeatedValue: 0)
-	var sp    = 0
+	/// Stack Pointer
+	private var sp    = 0
 	
-	// Registers
-	// VF (register 16) is a special register that is reserved for carry operations.
-	var V = [UInt8](count: 16, repeatedValue: 0)
-	var VF : UInt8 {
+	/// Registers 0-16. Register 16 (VF) is reserved.
+	private var V = [UInt8](count: 16, repeatedValue: 0)
+	
+	/// Register 16. A special register that is reserved for carry operations.
+	private var VF : UInt8 {
 		get {
 			return V[0xF]
 		}
@@ -26,55 +27,40 @@ class Swift8 {
 		}
 	}
 	
-	// Index Register (sometimes called the Address register) is 12-bits wide and is used with several opcodes that involve memory operations
-	var I : UInt16 = 0
-
-	var delayTimer : UInt8 = 0
-	var soundTimer : UInt8 = 0
+	/// Index Register (sometimes called the Address register) is 12-bits wide and is used with several opcodes that involve memory operations
+	private var I : UInt16 = 0
 	
-	// Keypad. Used to represent the input from a Hex keypad.
+	/// Delay Timer Register
+	private var delayTimer : UInt8 = 0
+	
+	/// Sound Timer Register
+	private var soundTimer : UInt8 = 0
+	
+	/// Keypad Register States
 	enum KeypadStatus {
 		case On
 		case Off
 	}
-	var keypad = [UInt8:KeypadStatus]()
 	
-	// System Memory (4KB)
-	// The first 512 bytes are reserved by the CHIP-8 system. Of which the lower 80 bytes are used to store the Fontset
-	var memory : [UInt8] = {
-		
-		var memory = [UInt8](count: 4096, repeatedValue: 0)
-		
-		let fontset: [UInt8] = [
-			0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-			0x20, 0x60, 0x20, 0x20, 0x70, // 1
-			0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-			0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-			0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-			0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-			0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-			0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-			0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-			0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-			0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-			0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-			0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-			0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-			0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-			0xF0, 0x80, 0xF0, 0x80, 0x80, // F
-		]
-		
-		for i in 0..<80 {
-			memory[i] = fontset[i]
-		}
-		return memory
-	}()
+	/// Keypad Registers - Used to represent the input from a Hex keypad
+	private var keypad = [UInt8:KeypadStatus]()
+	
+	/// System Memory (4KB)
+	/// The first 512 bytes are reserved by the CHIP-8 system, of which the lower 80 bytes are used to store the Fontset
+	private var memory = [UInt8](count: 4096, repeatedValue: 0)
+	
+	/// VRAM. 64x32 beautiful pixels.
+	internal var vram = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+	
+	/// Flag used to indicate the VRAM contents have been updated (Set during opcode Dxyn)
+	internal var needsDisplay = false
+	
+	// Internal timers used to step the system
+	private var clockTimer	: NSTimer?
+	private var cpuTimer	: NSTimer?
 	
 	
-	var needsDisplay = false	// Used to let the renderer (Swift8View) know when we have updated the graphics (see opcode Dxyn)
-	var clockTimer	: NSTimer?
-	var cpuTimer	: NSTimer?
-	
+	/// Toggles the system's CPU and Clock timers
 	var paused : Bool {
 		get {
 			if cpuTimer != nil {
@@ -103,14 +89,18 @@ class Swift8 {
 	
 	
 	init() {
-		srandom(UInt32(time(nil))) // seed the random number generator
+		// seed the random number generator
+		srandom(UInt32(time(nil)))
 	}
 	
+	/// Resets the system. Clears RAM and VRAM contents; resets the Program Counter, Index and other registers; clears the stack.
 	func reset() {
 		
 		pc = 0x200
 		
-		gfx = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+		vram = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+		
+		memory = [UInt8](count: 4096, repeatedValue: 0)
 		
 		stack = [UInt16](count: 16, repeatedValue: 0)
 		sp    = 0
@@ -125,38 +115,64 @@ class Swift8 {
 		keypad = [UInt8:KeypadStatus]()
 	}
 	
+	/// Load the system font into RAM
+	private func loadFontSet() {
+		
+		let fontset: [UInt8] = [
+			0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+			0x20, 0x60, 0x20, 0x20, 0x70, // 1
+			0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+			0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+			0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+			0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+			0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+			0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+			0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+			0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+			0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+			0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+			0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+			0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+			0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+			0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+		]
+		
+		for i in 0..<80 {
+			memory[i] = fontset[i]
+		}
+	}
+	
+	/// Resets the system. Then reads the ROM from disk into memory. If the system is paused it will be unpaused upon success
 	func loadROM(path: String) {
 		
 		reset()
 		
 		/*
 		The ROM is stored as 8-bit chunks on disk...
-		Alloc a buffer to read the ROM into, then copy the ROM into memory.
+		We read the ROM into memory starting at location 0x200
 		*/
-		let buffer = UnsafeMutablePointer<UInt8>(calloc(3584, sizeof(UInt8)))
-		if buffer != nil {
-			let rom = fopen(path, "r")
-			if rom != nil {
-				fread(buffer, sizeof(UInt8), 3584, rom)
-				
-				for i in 0..<3584 {
-					memory[512 + i] = UInt8(buffer[i])
-				}
-			}
+		let rom = fopen(path, "r")
+		if rom != nil {
+			
+			fread(&memory + 512, sizeof(UInt8), 3584, rom)
+			
 			fclose(rom)
+			
+			paused = false
 		}
-		
-		paused = false
 	}
 	
+	/// Set the key register to .On
 	func keydown(key: UInt8) {
 		keypad[key] = .On
 	}
 	
+	/// Set the key register to .Off
 	func keyup(key: UInt8) {
 		keypad[key] = .Off
 	}
 	
+	/// Update the internal delay & sound timers
 	@objc func stepClock() {
 		
 		if delayTimer > 0 {
@@ -169,13 +185,14 @@ class Swift8 {
 		}
 	}
 	
+	/// Process the next opcode
 	@objc func step() {
 		
 		/* 
 		Grab the opcode from memory
 		Opcodes are 2-bytes wide. And our RAM is stored as an array of bytes.
-		We can build an opcode by reading in the first byte from RAM into the opcode register, shifting it to the left, 
-		and then reading in the second byte into the opcode register.
+		We can build an opcode by reading in the first byte from RAM into the opcode register, 
+		shifting it to the left, and then reading in the second byte into the opcode register.
 		*/
 		let opcode: UInt16 = {
 			var o = UInt16( self.memory[self.pc] )
@@ -184,8 +201,8 @@ class Swift8 {
 			return o
 			}()
 		
-		// We break the opcode down into nibbles (4-bit chunks).
-		// Then we combine them in a Tuple to switch upon each nibble of the opcode.
+		// Break the opcode down into nibbles (4-bit chunks).
+		// Then combine them in a Tuple to switch upon each nibble of the opcode.
 		let ocn1 = (opcode & 0xF000) >> 12
 		let ocn2 = (opcode & 0x0F00) >> 8
 		let ocn3 = (opcode & 0x00F0) >> 4
@@ -200,7 +217,7 @@ class Swift8 {
 			
 			for col in 0..<64 {
 				for row in 0..<32 {
-					gfx[col][row] = 0
+					vram[col][row] = 0
 				}
 			}
 			pc += 2
@@ -431,10 +448,10 @@ class Swift8 {
 						if col > 63 {
 							break
 						}
-						if gfx[col][row] == 1 {
+						if vram[col][row] == 1 {
 							VF = 1
 						}
-						gfx[col][row] = gfx[col][row] ^ 1
+						vram[col][row] = vram[col][row] ^ 1
 					}
 				}
 			}
@@ -558,32 +575,32 @@ class Swift8 {
 		}
 	}
 	
-	// X is a register identifier. It is stored in the second nibble in the opcode.
+	/// Returns register X. X is stored in the second nibble in the opcode.
 	func getX(opcode: UInt16) -> UInt8 {
 		return UInt8((opcode & 0x0F00) >> 8)
 	}
 	
-	// Y is a register identifier. It is stored in the third nibble in the opcode.
+	/// Returns register Y. Y is stored in the third nibble in the opcode.
 	func getY(opcode: UInt16) -> UInt8 {
 		return UInt8((opcode & 0x00F0) >> 4)
 	}
 	
-	// N is a nibble constant stored in the last nibble of the opcode.
+	/// Returns constant N. N is a nibble stored in the last nibble of the opcode.
 	func getN(opcode: UInt16) -> UInt8 {
 		return UInt8(opcode & 0x00F)
 	}
 	
-	// NN is a byte constant stored in the lower byte of the opcode.
+	/// Returns constant NN. NN is a byte stored in the lower byte of the opcode.
 	func getNN(opcode: UInt16) -> UInt8 {
 		return UInt8(opcode & 0x00FF)
 	}
 	
-	// NNN is a memory address stored in the lower 12 bits of the opcode.
+	/// Returns address NNN. NNN is a memory address stored in the lower 12 bits of the opcode.
 	func getNNN(opcode: UInt16) -> UInt16 {
 		return opcode & 0x0FFF
 	}
 	
-	// Print the given opcode in Hex format
+	/// Prints the given opcode in Hex format
 	func printOpcode(opcode: UInt16) {
 		println("opcode = 0x\(String(opcode, radix: 16, uppercase: false))")
 	}
@@ -594,6 +611,7 @@ class Swift8 {
 
 // Extend Array so we can access the elements using UInt8 and UInt16 subscripting
 extension Array {
+	
 	subscript (index: UInt8) -> T {
 		get {
 			return self[ Int(index) ]

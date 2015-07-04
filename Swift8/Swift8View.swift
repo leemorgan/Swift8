@@ -41,7 +41,7 @@ class Swift8View: NSView {
 		for row in 0..<32 {
 			for col in 0..<64 {
 				
-				if swift8.gfx[col][row] != 0 {
+				if swift8.vram[col][row] != 0 {
 					let x = CGFloat(col) * pixelWidth
 					let y = CGFloat(row) * pixelHeight
 					
