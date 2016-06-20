@@ -19,33 +19,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 	
 	var swift8 = Swift8()
 	var paused = false
-	var displayTimer: NSTimer?
+	var displayTimer: Timer?
 	
 	
-	func applicationDidFinishLaunching(aNotification: NSNotification) {
+	func applicationDidFinishLaunching(_ aNotification: Notification) {
 		
 		openROM(nil)
 		
-		displayTimer = NSTimer.scheduledTimerWithTimeInterval(1.0/60.0, target: self, selector: "updateDisplay", userInfo: nil, repeats: true)
+		displayTimer = Timer.scheduledTimer(timeInterval: 1.0/60.0, target: self, selector: #selector(AppDelegate.updateDisplay), userInfo: nil, repeats: true)
 		
-		swift8view.becomeFirstResponder()
+		_ = swift8view.becomeFirstResponder()
 	}
 	
 	
-	@IBAction func openROM(sender: AnyObject?) {
+	@IBAction func openROM(_ sender: AnyObject?) {
 		
 		pause()
 		
 		let openPanel = NSOpenPanel()
 		
-		openPanel.beginWithCompletionHandler {
+		openPanel.begin {
 			result in
 			
 			if result == NSFileHandlingPanelOKButton {
 				
-				if let path = openPanel.URL?.path {
+				if let path = openPanel.url?.path {
 					
-					self.swift8.loadROM(path)
+					self.swift8.loadROM(path: path)
 					self.resume()
 				}
 			}
@@ -53,7 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 	}
 	
 	
-	@IBAction func togglePauseResume(sender: AnyObject?) {
+	@IBAction func togglePauseResume(_ sender: AnyObject?) {
 		if paused {
 			resume()
 		}
@@ -90,7 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 	}
 	
 	
-	func windowWillResize(sender: NSWindow, toSize frameSize: NSSize) -> NSSize {
+	func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
 		
 		let windowWidth = floor(frameSize.width / 64) * 64
 		return NSSize(width: windowWidth, height: frameSize.height)

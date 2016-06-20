@@ -9,13 +9,13 @@ class Swift8 {
 	private var pc : UInt16 = 0x200
 	
 	/// The Stack
-	private var stack = [UInt16](count: 16, repeatedValue: 0)
+	private var stack = [UInt16](repeating: 0, count: 16)
 	
 	/// Stack Pointer
 	private var sp    = 0
 	
 	/// Registers 0-16. Register 16 (VF) is reserved.
-	private var V = [UInt8](count: 16, repeatedValue: 0)
+	private var V = [UInt8](repeating: 0, count: 16)
 	
 	/// Register 16. A special register that is reserved for carry operations.
 	private var VF : UInt8 {
@@ -38,8 +38,8 @@ class Swift8 {
 	
 	/// Keypad Register States
 	enum KeypadStatus {
-		case On
-		case Off
+		case on
+		case off
 	}
 	
 	/// Keypad Registers - Used to represent the input from a Hex keypad
@@ -47,17 +47,17 @@ class Swift8 {
 	
 	/// System Memory (4KB)
 	/// The first 512 bytes are reserved by the CHIP-8 system, of which the lower 80 bytes are used to store the Fontset
-	private var memory = [UInt8](count: 4096, repeatedValue: 0)
+	private var memory = [UInt8](repeating: 0, count: 4096)
 	
 	/// VRAM. 64x32 beautiful pixels.
-	internal var vram = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+	internal var vram = Array(repeating: [Int](repeating: 0, count: 32), count: 64)
 	
 	/// Flag used to indicate the VRAM contents have been updated (Set during opcode Dxyn)
 	internal var needsDisplay = false
 	
 	// Internal timers used to step the system
-	private var clockTimer	: NSTimer?
-	private var cpuTimer	: NSTimer?
+	private var clockTimer	: Timer?
+	private var cpuTimer	: Timer?
 	
 	
 	/// Toggles the system's CPU and Clock timers
@@ -78,10 +78,10 @@ class Swift8 {
 			}
 			else {
 				if cpuTimer == nil {
-					cpuTimer = NSTimer.scheduledTimerWithTimeInterval(1.0/600.0, target: self, selector: "step", userInfo: nil, repeats: true)
+					cpuTimer = Timer.scheduledTimer(timeInterval: 1.0/600.0, target: self, selector: #selector(Swift8.step), userInfo: nil, repeats: true)
 				}
 				if clockTimer == nil {
-					clockTimer = NSTimer.scheduledTimerWithTimeInterval(1.0/60.0, target: self, selector: "stepClock", userInfo: nil, repeats: true)
+					clockTimer = Timer.scheduledTimer(timeInterval: 1.0/60.0, target: self, selector: #selector(Swift8.stepClock), userInfo: nil, repeats: true)
 				}
 			}
 		}
@@ -98,14 +98,15 @@ class Swift8 {
 		
 		pc = 0x200
 		
-		vram = Array(count: 64, repeatedValue: [Int](count: 32, repeatedValue: 0))
+		vram = Array(repeating: [Int](repeating: 0, count: 32), count: 64)
 		
-		memory = [UInt8](count: 4096, repeatedValue: 0)
+		memory = [UInt8](repeating: 0, count: 4096)
+		loadFontSet()
 		
-		stack = [UInt16](count: 16, repeatedValue: 0)
+		stack = [UInt16](repeating: 0, count: 16)
 		sp    = 0
 		
-		V = [UInt8](count: 16, repeatedValue: 0)
+		V = [UInt8](repeating: 0, count: 16)
 		
 		I = 0
 		
@@ -163,25 +164,25 @@ class Swift8 {
 	}
 	
 	/// Set the key register to .On
-	func keydown(key: UInt8) {
-		keypad[key] = .On
+	func keydown(_ key: UInt8) {
+		keypad[key] = .on
 	}
 	
 	/// Set the key register to .Off
-	func keyup(key: UInt8) {
-		keypad[key] = .Off
+	func keyup(_ key: UInt8) {
+		keypad[key] = .off
 	}
 	
 	/// Update the internal delay & sound timers
 	@objc func stepClock() {
 		
 		if delayTimer > 0 {
-			delayTimer--
+			delayTimer -= 1
 		}
 		
 		if soundTimer > 0 {
 			NSBeep()
-			soundTimer--
+			soundTimer -= 1
 		}
 	}
 	
@@ -199,7 +200,7 @@ class Swift8 {
 			o <<= 8
 			o |= UInt16( self.memory[self.pc + 1] )
 			return o
-			}()
+		}()
 		
 		// Break the opcode down into nibbles (4-bit chunks).
 		// Then combine them in a Tuple to switch upon each nibble of the opcode.
@@ -225,14 +226,14 @@ class Swift8 {
 		case (0, 0, 0xE, 0xE):	// 00EE		RET
 			
 			if sp <= 0 {
-				println("WARNING: Stack Underflow")
+				print("WARNING: Stack Underflow")
 				return
 			}
-			sp--
+			sp -= 1
 			pc = stack[sp]
 			
 		case (0, _, _, _):		// 0nnn		SYS addr
-			println("WARNING: SYS addr is not implemented")
+			print("WARNING: SYS addr is not implemented")
 			
 		case (1, _, _, _):		// 1nnn		JP addr
 			
@@ -241,11 +242,11 @@ class Swift8 {
 		case (2, _, _, _):		// 2nnn		CALL addr
 			
 			if sp+1 > 15 {
-				println("WARNING: Stack Overflow")
+				print("WARNING: Stack Overflow")
 				return
 			}
 			stack[sp] = pc + 2
-			sp++
+			sp += 1
 			pc = getNNN(opcode)
 			
 		case (3, _, _, _):		// 3xnn		SE Vx, byte
@@ -417,7 +418,7 @@ class Swift8 {
 			
 			let x = getX(opcode)
 			let nn = getNN(opcode)
-			let randomByte = UInt8( random() & 0x00FF ) 
+			let randomByte = UInt8( arc4random() & 0x00FF )
 			
 			V[x] = randomByte & nn
 			pc += 2
@@ -432,7 +433,7 @@ class Swift8 {
 			
 			for yLine in 0..<height {
 				
-				var row = yLine + V[y]
+				let row = yLine + V[y]
 				if row > 31 {
 					break
 				}
@@ -441,10 +442,10 @@ class Swift8 {
 					// Each pixel is one bit.
 					// Each sprite is 1 byte wide.
 					// So we step through each bit checking if it is set.
-					var pixel = memory[I + UInt16(yLine)] & UInt8( (0x80 >> xLine) )
+					let pixel = memory[I + UInt16(yLine)] & UInt8( (0x80 >> xLine) )
 					
 					if pixel != 0 {
-						var col = xLine + V[x]
+						let col = xLine + V[x]
 						if col > 63 {
 							break
 						}
@@ -465,9 +466,9 @@ class Swift8 {
 			
 			if let keypadStatus = keypad[vx] {
 				switch keypadStatus {
-				case .On:
+				case .on:
 					pc += 4
-				case .Off:
+				case .off:
 					pc += 2
 				}
 			}
@@ -479,9 +480,9 @@ class Swift8 {
 			
 			if let keypadStatus = keypad[vx] {
 				switch keypadStatus {
-				case .On:
+				case .on:
 					pc += 2
-				case .Off:
+				case .off:
 					pc += 4
 				}
 			}
@@ -496,12 +497,10 @@ class Swift8 {
 		case (0xF, _, 0, 0xA):	// Fx0A		LD Vx, K
 			
 			let x = getX(opcode)
-			var keypress = false
 			
 			for (key, state) in keypad {
-				if state == .On {
+				if state == .on {
 					V[x] = key
-					keypress = true
 					pc += 2
 					return
 				}
@@ -571,38 +570,38 @@ class Swift8 {
 			pc += 2
 			
 		default:
-			println("Unknown Opcode: 0x\(String(opcode, radix: 16, uppercase: false))")
+			print("Unknown Opcode: 0x\(String(opcode, radix: 16, uppercase: false))")
 		}
 	}
 	
 	/// Returns register X. X is stored in the second nibble in the opcode.
-	func getX(opcode: UInt16) -> UInt8 {
+	func getX(_ opcode: UInt16) -> UInt8 {
 		return UInt8((opcode & 0x0F00) >> 8)
 	}
 	
 	/// Returns register Y. Y is stored in the third nibble in the opcode.
-	func getY(opcode: UInt16) -> UInt8 {
+	func getY(_ opcode: UInt16) -> UInt8 {
 		return UInt8((opcode & 0x00F0) >> 4)
 	}
 	
 	/// Returns constant N. N is a nibble stored in the last nibble of the opcode.
-	func getN(opcode: UInt16) -> UInt8 {
+	func getN(_ opcode: UInt16) -> UInt8 {
 		return UInt8(opcode & 0x00F)
 	}
 	
 	/// Returns constant NN. NN is a byte stored in the lower byte of the opcode.
-	func getNN(opcode: UInt16) -> UInt8 {
+	func getNN(_ opcode: UInt16) -> UInt8 {
 		return UInt8(opcode & 0x00FF)
 	}
 	
 	/// Returns address NNN. NNN is a memory address stored in the lower 12 bits of the opcode.
-	func getNNN(opcode: UInt16) -> UInt16 {
+	func getNNN(_ opcode: UInt16) -> UInt16 {
 		return opcode & 0x0FFF
 	}
 	
 	/// Prints the given opcode in Hex format
-	func printOpcode(opcode: UInt16) {
-		println("opcode = 0x\(String(opcode, radix: 16, uppercase: false))")
+	func printOpcode(_ opcode: UInt16) {
+		print("opcode = 0x\(String(opcode, radix: 16, uppercase: false))")
 	}
 }
 
@@ -612,7 +611,7 @@ class Swift8 {
 // Extend Array so we can access the elements using UInt8 and UInt16 subscripting
 extension Array {
 	
-	subscript (index: UInt8) -> T {
+	subscript(index: UInt8) -> Element {
 		get {
 			return self[ Int(index) ]
 		}
@@ -621,7 +620,7 @@ extension Array {
 		}
 	}
 	
-	subscript (index: UInt16) -> T {
+	subscript(index: UInt16) -> Element {
 		get {
 			return self[ Int(index) ]
 		}
