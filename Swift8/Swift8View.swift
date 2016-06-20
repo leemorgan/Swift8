@@ -12,7 +12,7 @@ import AppKit
 class Swift8View: NSView {
 	
 	var swift8 : Swift8 {
-		let appDelegate = NSApplication.sharedApplication().delegate as! AppDelegate
+		let appDelegate = NSApplication.shared().delegate as! AppDelegate
 		return appDelegate.swift8
 	}
 	
@@ -28,15 +28,15 @@ class Swift8View: NSView {
 		return true
 	}
 	
-	override func drawRect(dirtyRect: NSRect) {
+	override func draw(_ dirtyRect: NSRect) {
 		
 		let pixelWidth	= floor( self.bounds.size.width / 64 )
 		let pixelHeight	= floor( self.bounds.size.height / 32 )
 		
-		NSColor.blackColor().setFill()
+		NSColor.black().setFill()
 		NSRectFill(self.bounds)
 		
-		NSColor.whiteColor().setFill()
+		NSColor.white().setFill()
 		
 		for row in 0..<32 {
 			for col in 0..<64 {
@@ -55,12 +55,10 @@ class Swift8View: NSView {
 		}
 	}
 	
-	override func keyDown(theEvent: NSEvent) {
+	override func keyDown(_ theEvent: NSEvent) {
 		
-		if let characters = theEvent.characters {
-			var firstChar = Array(characters)[0]
-			
-			switch firstChar {
+		if let key = theEvent.charactersIgnoringModifiers?.characters.first {
+			switch key {
 			case "1":
 				swift8.keydown(1)
 			case "2":
@@ -99,12 +97,10 @@ class Swift8View: NSView {
 		}
 	}
 	
-	override func keyUp(theEvent: NSEvent) {
+	override func keyUp(_ theEvent: NSEvent) {
 		
-		if let characters = theEvent.characters {
-			var firstChar = Array(characters)[0]
-			
-			switch firstChar {
+		if let key = theEvent.charactersIgnoringModifiers?.characters.first {
+			switch key {
 			case "1":
 				swift8.keyup(1)
 			case "2":
